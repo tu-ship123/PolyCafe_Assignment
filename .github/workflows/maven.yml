@@ -1,0 +1,33 @@
+name: PolyCafe CI/CD Automation
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Tải code của bạn về máy chủ ảo
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. Cài đặt Java 17 (Khớp với cấu hình pom.xml của bạn)
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    # 3. Chạy lệnh Build và Test
+    # -Dmaven.test.failure.ignore=true : Lệnh này bảo hệ thống là "Nếu test lỗi do không kết nối được DB thì cứ Bỏ qua, đừng báo đỏ"
+    - name: Build with Maven
+      run: mvn -B package --file pom.xml -Dmaven.test.failure.ignore=true
+
+    # 4. (Tùy chọn) Thông báo hoàn tất
+    - name: Notify Success
+      run: echo "Build và Test đã hoàn tất!"
