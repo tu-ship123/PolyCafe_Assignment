@@ -1,9 +1,13 @@
 name: PolyCafe CI/CD Automation
 
 on:
-  push:
-    branches: [ "main", "master" ]
+  # 1. Kích hoạt khi có Pull Request nhắm vào nhánh main hoặc master
+  # Đây là bước "Kiểm tra vé" trước khi cho vào cổng
   pull_request:
+    branches: [ "main", "master" ]
+
+  # 2. Vẫn giữ push để sau khi Merge xong, nó chạy lại một lần nữa (để deploy hoặc lưu artifact)
+  push:
     branches: [ "main", "master" ]
 
 jobs:
@@ -11,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Tải code của bạn về máy chủ ảo
+    # 1. Tải code về
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Cài đặt Java 17 (Khớp với cấu hình pom.xml của bạn)
+    # 2. Cài đặt môi trường Java
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -23,11 +27,14 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    # 3. Chạy lệnh Build và Test
-    # -Dmaven.test.failure.ignore=true : Lệnh này bảo hệ thống là "Nếu test lỗi do không kết nối được DB thì cứ Bỏ qua, đừng báo đỏ"
+    # 3. Chạy Build và Test (QUAN TRỌNG)
+    # Mình đã XÓA đoạn "-Dmaven.test.failure.ignore=true".
+    # Lý do: Để demo cho giáo viên, nếu Test lỗi -> Action phải Đỏ -> Nút Merge bị khóa.
+    # Như vậy mới đúng tính chất "Bảo vệ nhánh nguồn".
     - name: Build with Maven
-      run: mvn -B package --file pom.xml -Dmaven.test.failure.ignore=true
+      run: mvn -B package --file pom.xml
 
-    # 4. (Tùy chọn) Thông báo hoàn tất
+    # 4. Thông báo (Chỉ hiện khi bước trên thành công)
     - name: Notify Success
-      run: echo "Build và Test đã hoàn tất!"
+      if: success()
+      run: echo "Code xịn! Test đã qua, sẵn sàng để Merge."
