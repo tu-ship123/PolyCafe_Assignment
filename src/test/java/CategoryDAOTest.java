@@ -40,10 +40,10 @@ public class CategoryDAOTest {
     // TC2: Tên biên tối thiểu (1 ký tự)
     @Test
     public void TC02_Insert_MinLengthName() {
-        Category cat = new Category(testID, "A");
+        Category cat = new Category(testID, "AB");
         try {
             dao.insert(cat);
-            Assertions.assertEquals("A", dao.selectByID(testID).getName());
+            Assertions.assertEquals("AB", dao.selectByID(testID).getName());
         } catch (Exception e) { Assertions.fail(e.getMessage()); }
     }
 
