@@ -1,12 +1,8 @@
 name: PolyCafe CI/CD Automation
 
 on:
-  # 1. Kích hoạt khi có Pull Request nhắm vào nhánh main hoặc master
-  # Đây là bước "Kiểm tra vé" trước khi cho vào cổng
   pull_request:
     branches: [ "main", "master" ]
-
-  # 2. Vẫn giữ push để sau khi Merge xong, nó chạy lại một lần nữa (để deploy hoặc lưu artifact)
   push:
     branches: [ "main", "master" ]
 
@@ -14,12 +10,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # --- PHẦN MỚI THÊM: Tạo máy chủ SQL Server ảo ---
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          # LƯU Ý: Mật khẩu SQL Server bắt buộc phải có: Chữ Hoa, thường, số và ký tự đặc biệt
+          SA_PASSWORD: "Password123!" 
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+        # Đợi DB khởi động xong mới chạy các bước tiếp theo
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Password123!' -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    # ------------------------------------------------
+
     steps:
-    # 1. Tải code về
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Cài đặt môi trường Java
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -27,14 +39,18 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    # 3. Chạy Build và Test (QUAN TRỌNG)
-    # Mình đã XÓA đoạn "-Dmaven.test.failure.ignore=true".
-    # Lý do: Để demo cho giáo viên, nếu Test lỗi -> Action phải Đỏ -> Nút Merge bị khóa.
-    # Như vậy mới đúng tính chất "Bảo vệ nhánh nguồn".
+    # --- QUAN TRỌNG: Cấu hình lại file kết nối Database trong Java ---
+    # Vì DB ảo này có password là "Password123!", bạn cần đảm bảo code Java kết nối đúng pass này.
+    # Nếu code Java của bạn đang để cứng password khác, bạn có thể dùng lệnh này để ghi đè file cấu hình 
+    # (Ví dụ: ghi đè file context.xml hoặc application.properties nếu cần)
+    # Nhưng đơn giản nhất là sửa code Java hoặc dùng biến môi trường.
+    
     - name: Build with Maven
+      # Truyền biến môi trường DB_PASSWORD vào nếu code bạn hỗ trợ đọc biến môi trường
+      env: 
+        DB_PASSWORD: "Password123!"
       run: mvn -B package --file pom.xml
-
-    # 4. Thông báo (Chỉ hiện khi bước trên thành công)
+      
     - name: Notify Success
       if: success()
-      run: echo "Code xịn! Test đã qua, sẵn sàng để Merge."
+      run: echo "Code xịn! Đã kết nối được DB và Build thành công."

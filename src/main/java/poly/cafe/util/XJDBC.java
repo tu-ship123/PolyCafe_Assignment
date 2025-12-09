@@ -19,13 +19,23 @@ public class XJDBC {
     private static String driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
     private static String dburl = "jdbc:sqlserver://localhost;database=PolyCafe;encrypt=true;trustServerCertificate=true";
 
-    //private static String dburl = "jdbc:sqlserver://localhost;database=EduSys";
+    // Mật khẩu mặc định ở máy local của bạn
     private static String user = "sa";
     private static String pass = "123456";
 
-    //Viết PreparedStatement. Object... args: ds các tham số
+    // Viết PreparedStatement. Object... args: ds các tham số
     public static PreparedStatement getStmt(String sql, Object... args) throws SQLException {
-        Connection connection = DriverManager.getConnection(dburl, user, pass); // gọi từ JdbcHelper
+        
+        // --- ĐOẠN CODE MỚI THÊM VÀO ---
+        // Logic: Nếu tìm thấy biến môi trường DB_PASSWORD (trên GitHub) thì dùng nó.
+        // Còn không thì cứ dùng biến 'pass' (123456) như cũ.
+        String currentPass = pass;
+        if (System.getenv("DB_PASSWORD") != null) {
+            currentPass = System.getenv("DB_PASSWORD");
+        }
+        // -----------------------------
+
+        Connection connection = DriverManager.getConnection(dburl, user, currentPass); // Sử dụng currentPass thay vì pass
         PreparedStatement pstmt;
 
         if (sql.trim().startsWith("{")) {
@@ -40,7 +50,7 @@ public class XJDBC {
         return pstmt;
     }
 
-    //Phương thức update = insert + update + delete:
+    // Phương thức update = insert + update + delete:
     public static int update(String sql, Object... args) {
         try {
             PreparedStatement stmt = getStmt(sql, args);
@@ -54,7 +64,7 @@ public class XJDBC {
         }
     }
 
-    //Phương thức thực hiện truy vấn sql dùng select:
+    // Phương thức thực hiện truy vấn sql dùng select:
     public static ResultSet query(String sql, Object... args) {
         try {
             PreparedStatement stmt = getStmt(sql, args);
@@ -64,7 +74,7 @@ public class XJDBC {
         }
     }
 
-    //Trả về 1 đối tượng 
+    // Trả về 1 đối tượng 
     public static Object value(String sql, Object... args) {
         try (ResultSet rs = query(sql, args)) {
             if (rs.next()) {
